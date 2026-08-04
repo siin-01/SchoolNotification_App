@@ -28,9 +28,6 @@ if "cal_year" not in st.session_state:
     st.session_state.cal_year = datetime.now().year
 if "cal_month" not in st.session_state:
     st.session_state.cal_month = datetime.now().month
-# expander 상태 제어용 세션
-if "expander_open" not in st.session_state:
-    st.session_state.expander_open = False
 
 # ---------------------------------------------------------
 # 2. 과목 데이터 정의
@@ -127,7 +124,44 @@ if current_id not in students_data or st.session_state.edit_subject_mode:
     st.stop()
 
 # ---------------------------------------------------------
-# 5. 메인 화면 (사이드바 고정 + 수행평가 추가 + 달력)
+# 5. 수행평가 추가 모달(Dialog) 정의
+# ---------------------------------------------------------
+evaluations_data = load_json(EVALUATIONS_FILE)
+
+@st.dialog("수행평가 추가")
+def add_eval_dialog(subject_options):
+    # '미선택'을 첫 번째 옵션으로 설정
+    choices = ["미선택"] + subject_options
+    
+    with st.form("add_evaluation_form", clear_on_submit=True):
+        selected_sub = st.selectbox("과목 선택", choices, index=0)
+        eval_date = st.date_input("날짜 선택", value=date.today(), format="YYYY/MM/DD")
+        eval_title = st.text_input("제목 입력")
+        
+        submit_btn = st.form_submit_button("등록", type="primary")
+        
+        if submit_btn:
+            if selected_sub == "미선택":
+                st.error("과목을 선택해주세요.")
+            elif not eval_title.strip():
+                st.error("제목을 입력해주세요.")
+            else:
+                date_str = eval_date.strftime("%Y-%m-%d")
+                
+                if date_str not in evaluations_data:
+                    evaluations_data[date_str] = []
+                
+                evaluations_data[date_str].append({
+                    "subject": selected_sub,
+                    "title": eval_title.strip()
+                })
+                
+                save_json(EVALUATIONS_FILE, evaluations_data)
+                st.success("등록되었습니다.")
+                st.rerun()
+
+# ---------------------------------------------------------
+# 6. 메인 화면 (사이드바 + 달력)
 # ---------------------------------------------------------
 user_info = students_data[current_id]
 user_fixed = user_info.get("fixed_subjects", [])
@@ -137,8 +171,14 @@ my_subject_list = list(user_fixed) + [f"{sub}{letter}" for sub, letter in user_s
 
 # [사이드바 UI 구성]
 with st.sidebar:
-    st.markdown("## 수행평가 일정")
-    st.markdown(f"### {current_id}")
+    col_title, col_btn = st.columns([4, 1])
+    with col_title:
+        st.markdown("<h3 style='margin: 0; padding: 0;'>수행평가 일정</h3>", unsafe_allow_html=True)
+    with col_btn:
+        if st.button("➕", key="open_add_dialog_btn", help="수행평가 추가"):
+            add_eval_dialog(my_subject_list)
+            
+    st.markdown(f"#### {current_id}")
     st.markdown("---")
     st.markdown("#### 수강과목")
     for s in my_subject_list:
@@ -154,39 +194,7 @@ with st.sidebar:
         st.session_state.edit_subject_mode = False
         st.rerun()
 
-# [메인 화면]
-evaluations_data = load_json(EVALUATIONS_FILE)
-
-# 1. 수행평가 추가 구역 (등록 시 자동 접힘 처리)
-with st.expander("수행평가 추가", expanded=st.session_state.expander_open):
-    with st.form("add_evaluation_form", clear_on_submit=True):
-        selected_sub_for_eval = st.selectbox("과목 선택", my_subject_list)
-        eval_date = st.date_input("날짜 선택", value=date.today(), format="YYYY/MM/DD")
-        eval_title = st.text_input("제목 입력")
-        
-        submit_btn = st.form_submit_button("등록")
-        
-        if submit_btn:
-            if not eval_title.strip():
-                st.error("제목을 입력해주세요.")
-            else:
-                date_str = eval_date.strftime("%Y-%m-%d")
-                
-                if date_str not in evaluations_data:
-                    evaluations_data[date_str] = []
-                
-                evaluations_data[date_str].append({
-                    "subject": selected_sub_for_eval,
-                    "title": eval_title.strip()
-                })
-                
-                save_json(EVALUATIONS_FILE, evaluations_data)
-                # 폼 닫기 설정 후 rerun
-                st.session_state.expander_open = False
-                st.success("등록되었습니다.")
-                st.rerun()
-
-# 2. 월 선택 컨트롤 (월만 표기)
+# 1. 월 선택 컨트롤 (달력이 화면 최상단에 위치)
 col_prev, col_title, col_next = st.columns([1, 4, 1])
 with col_prev:
     if st.button("이전 달"):
@@ -212,7 +220,7 @@ with col_title:
         unsafe_allow_html=True
     )
 
-# 3. 달력 커스텀 CSS (CSS 툴팁 스타일 정의)
+# 2. 달력 커스텀 CSS (Hover 툴팁 스타일)
 st.markdown("""
 <style>
 .tooltip-container {
@@ -255,7 +263,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 4. 달력 그리드 렌더링
+# 3. 달력 그리드 렌더링
 year = st.session_state.cal_year
 month = st.session_state.cal_month
 today_str = date.today().strftime("%Y-%m-%d")
