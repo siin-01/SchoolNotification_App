@@ -49,7 +49,8 @@ SELECT_SUBJECTS = {
     ]
 }
 
-ALPHABET_LIST = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
+# '선택 안 함' 옵션 추가
+ALPHABET_LIST = ["선택 안 함"] + [chr(i) for i in range(ord('A'), ord('Z') + 1)]
 
 # ---------------------------------------------------------
 # 3. 로그인 화면 (숫자 5자리 검증)
@@ -83,7 +84,7 @@ if current_id not in students_data or st.session_state.edit_subject_mode:
         
     st.markdown("---")
     st.markdown("### 학생 선택 과목")
-    st.caption("과목을 선택한 후 분반 알파벳(A~Z)을 지정해주세요.")
+    st.caption("과목을 선택한 후 분반 알파벳(A~Z)을 지정해주세요. 분반이 없다면 '선택 안 함'을 고르시면 됩니다.")
     
     existing_user_data = students_data.get(current_id, {})
     existing_user_selects = existing_user_data.get("selected_subjects", {})
@@ -95,7 +96,7 @@ if current_id not in students_data or st.session_state.edit_subject_mode:
         for sub in sub_list:
             col1, col2 = st.columns([3, 2])
             is_checked_default = sub in existing_user_selects
-            default_letter = existing_user_selects.get(sub, "A")
+            default_letter = existing_user_selects.get(sub, "선택 안 함")
             
             with col1:
                 is_checked = st.checkbox(sub, value=is_checked_default, key=f"check_{sub}")
@@ -166,7 +167,11 @@ user_info = students_data[current_id]
 user_fixed = user_info.get("fixed_subjects", [])
 user_selected = user_info.get("selected_subjects", {})
 
-my_subject_list = list(user_fixed) + [f"{sub}{letter}" for sub, letter in user_selected.items()]
+# '선택 안 함'인 과목은 알파벳 표기를 안 붙임
+my_subject_list = list(user_fixed) + [
+    f"{sub}" if letter == "선택 안 함" else f"{sub}{letter}"
+    for sub, letter in user_selected.items()
+]
 
 # 공통 CSS 정의 (사이드바 잘림 방지 툴팁 위치 개선)
 st.markdown("""
@@ -211,7 +216,7 @@ st.markdown("""
     opacity: 1;
 }
 
-/* 사이드바 전용 툴팁 (잘림 방지: 아래쪽/왼쪽 방향 배치) */
+/* 사이드바 전용 툴팁 (잘림 방지) */
 .sidebar-tooltip-text {
     visibility: hidden;
     min-width: 150px;
