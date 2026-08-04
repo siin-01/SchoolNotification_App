@@ -168,7 +168,7 @@ user_selected = user_info.get("selected_subjects", {})
 
 my_subject_list = list(user_fixed) + [f"{sub}{letter}" for sub, letter in user_selected.items()]
 
-# 공통 CSS 정의 (커스텀 Hover 툴팁)
+# 공통 CSS 정의 (사이드바 잘림 방지 툴팁 위치 개선)
 st.markdown("""
 <style>
 .tooltip-container {
@@ -185,19 +185,20 @@ st.markdown("""
     font-size: 11px;
     user-select: none;
 }
+/* 달력 내부 툴팁 (위쪽에 노출) */
 .tooltip-text {
     visibility: hidden;
-    width: 180px;
+    width: 140px;
     background-color: #333;
     color: #fff;
     text-align: left;
     border-radius: 5px;
     padding: 6px 8px;
     position: absolute;
-    z-index: 999;
+    z-index: 9999;
     bottom: 125%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-80%);
     opacity: 0;
     transition: opacity 0.2s;
     font-size: 11px;
@@ -206,6 +207,33 @@ st.markdown("""
     line-height: 1.4;
 }
 .tooltip-container:hover .tooltip-text, .tooltip-container:active .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* 사이드바 전용 툴팁 (잘림 방지: 아래쪽/왼쪽 방향 배치) */
+.sidebar-tooltip-text {
+    visibility: hidden;
+    min-width: 150px;
+    max-width: 220px;
+    width: max-content;
+    background-color: #333;
+    color: #fff;
+    text-align: left;
+    border-radius: 5px;
+    padding: 6px 8px;
+    position: absolute;
+    z-index: 9999;
+    top: 100%;
+    right: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-size: 11px;
+    word-break: break-all;
+    box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
+    line-height: 1.4;
+}
+.tooltip-container:hover .sidebar-tooltip-text, .tooltip-container:active .sidebar-tooltip-text {
     visibility: visible;
     opacity: 1;
 }
@@ -242,11 +270,11 @@ with st.sidebar:
             tooltip_content = "등록된 수행평가 없음"
             
         sub_html = (
-            f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">'
+            f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">'
             f'<span>• {sub}</span>'
             f'<div class="tooltip-container">'
             f'<span class="tooltip-icon">i</span>'
-            f'<div class="tooltip-text">{tooltip_content}</div>'
+            f'<div class="sidebar-tooltip-text">{tooltip_content}</div>'
             f'</div>'
             f'</div>'
         )
