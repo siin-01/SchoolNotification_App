@@ -130,7 +130,6 @@ evaluations_data = load_json(EVALUATIONS_FILE)
 
 @st.dialog("수행평가 추가")
 def add_eval_dialog(subject_options):
-    # '미선택'을 첫 번째 옵션으로 설정
     choices = ["미선택"] + subject_options
     
     with st.form("add_evaluation_form", clear_on_submit=True):
@@ -169,6 +168,50 @@ user_selected = user_info.get("selected_subjects", {})
 
 my_subject_list = list(user_fixed) + [f"{sub}{letter}" for sub, letter in user_selected.items()]
 
+# 공통 CSS 정의 (커스텀 Hover 툴팁)
+st.markdown("""
+<style>
+.tooltip-container {
+    position: relative;
+    display: inline-block;
+}
+.tooltip-icon {
+    cursor: pointer;
+    font-weight: bold;
+    color: #555;
+    padding: 1px 5px;
+    background-color: #e0e0e0;
+    border-radius: 50%;
+    font-size: 11px;
+    user-select: none;
+}
+.tooltip-text {
+    visibility: hidden;
+    width: 180px;
+    background-color: #333;
+    color: #fff;
+    text-align: left;
+    border-radius: 5px;
+    padding: 6px 8px;
+    position: absolute;
+    z-index: 999;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-size: 11px;
+    word-break: break-all;
+    box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
+    line-height: 1.4;
+}
+.tooltip-container:hover .tooltip-text, .tooltip-container:active .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # [사이드바 UI 구성]
 with st.sidebar:
     col_title, col_btn = st.columns([4, 1])
@@ -181,8 +224,33 @@ with st.sidebar:
     st.markdown(f"#### {current_id}")
     st.markdown("---")
     st.markdown("#### 수강과목")
-    for s in my_subject_list:
-        st.write(f"- {s}")
+    
+    # 각 수강과목별 수행평가 탐색 및 i버튼 렌더링
+    for sub in my_subject_list:
+        sub_evals = []
+        for date_k, eval_list in sorted(evaluations_data.items()):
+            for item in eval_list:
+                if item["subject"] == sub:
+                    sub_evals.append(f"• {date_k}: {item['title']}")
+        
+        if sub_evals:
+            tooltip_content = "<br>".join([
+                e.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+                for e in sub_evals
+            ])
+        else:
+            tooltip_content = "등록된 수행평가 없음"
+            
+        sub_html = (
+            f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">'
+            f'<span>• {sub}</span>'
+            f'<div class="tooltip-container">'
+            f'<span class="tooltip-icon">i</span>'
+            f'<div class="tooltip-text">{tooltip_content}</div>'
+            f'</div>'
+            f'</div>'
+        )
+        st.markdown(sub_html, unsafe_allow_html=True)
         
     st.markdown("---")
     if st.button("과목 수정"):
@@ -194,7 +262,7 @@ with st.sidebar:
         st.session_state.edit_subject_mode = False
         st.rerun()
 
-# 1. 월 선택 컨트롤 (달력이 화면 최상단에 위치)
+# 1. 월 선택 컨트롤
 col_prev, col_title, col_next = st.columns([1, 4, 1])
 with col_prev:
     if st.button("이전 달"):
@@ -220,50 +288,7 @@ with col_title:
         unsafe_allow_html=True
     )
 
-# 2. 달력 커스텀 CSS (Hover 툴팁 스타일)
-st.markdown("""
-<style>
-.tooltip-container {
-    position: relative;
-    display: inline-block;
-}
-.tooltip-icon {
-    cursor: pointer;
-    font-weight: bold;
-    color: #555;
-    padding: 0 4px;
-    background-color: #ddd;
-    border-radius: 50%;
-    font-size: 10px;
-    user-select: none;
-}
-.tooltip-text {
-    visibility: hidden;
-    width: 120px;
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    border-radius: 4px;
-    padding: 4px 6px;
-    position: absolute;
-    z-index: 99;
-    bottom: 125%;
-    left: 50%;
-    transform: translateX(-80%);
-    opacity: 0;
-    transition: opacity 0.2s;
-    font-size: 11px;
-    word-break: break-all;
-    box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
-}
-.tooltip-container:hover .tooltip-text, .tooltip-container:active .tooltip-text {
-    visibility: visible;
-    opacity: 1;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# 3. 달력 그리드 렌더링
+# 2. 달력 그리드 렌더링
 year = st.session_state.cal_year
 month = st.session_state.cal_month
 today_str = date.today().strftime("%Y-%m-%d")
@@ -300,7 +325,7 @@ for week in month_calendar:
                                 f'<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65px;">{item_sub}</span>'
                                 f'<div class="tooltip-container">'
                                 f'<span class="tooltip-icon">i</span>'
-                                f'<span class="tooltip-text">{safe_title}</span>'
+                                f'<div class="tooltip-text">{safe_title}</div>'
                                 f'</div>'
                                 f'</div>'
                             )
