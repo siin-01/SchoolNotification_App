@@ -130,6 +130,7 @@ user_info = students_data[current_id]
 user_fixed = user_info.get("fixed_subjects", [])
 user_selected = user_info.get("selected_subjects", {})
 
+# 저장 형태 예시: ['독서', '영어2', '지구과학2A']
 my_subject_list = list(user_fixed) + [f"{sub}{letter}" for sub, letter in user_selected.items()]
 
 # [사이드바 UI 구성]
@@ -158,7 +159,6 @@ evaluations_data = load_json(EVALUATIONS_FILE)
 with st.expander("수행평가 추가", expanded=False):
     with st.form("add_evaluation_form"):
         selected_sub_for_eval = st.selectbox("과목 선택", my_subject_list)
-        # format 파라미터 오류를 수정한 부분입니다.
         eval_date = st.date_input("날짜 선택", value=date.today(), format="YYYY/MM/DD")
         eval_title = st.text_input("제목 입력")
         
@@ -208,7 +208,7 @@ with col_title:
         unsafe_allow_html=True
     )
 
-# 3. 달력 그리드 렌더링 (높이 고정 130px & HTML Tooltip 적용)
+# 3. 달력 그리드 렌더링
 year = st.session_state.cal_year
 month = st.session_state.cal_month
 today_str = date.today().strftime("%Y-%m-%d")
@@ -233,22 +233,28 @@ for week in month_calendar:
                 border_style = "border: 2px solid #3366ff;" if is_today else "border: 1px solid #ddd;"
                 bg_style = "background-color: #f8f9fa;" if is_today else "background-color: #ffffff;"
                 
-                # 일별 항목 HTML 생성
+                # 일별 수행평가 항목 HTML 조합 (줄바꿈 없이 한 줄로 처리하여 파싱 오류 방지)
                 eval_html_items = ""
                 if curr_date_str in evaluations_data:
                     for item in evaluations_data[curr_date_str]:
-                        if item["subject"] in my_subject_list:
-                            eval_html_items += f"""
-                            <div style="font-size: 11px; margin-top: 3px; background-color: #eee; padding: 2px 4px; border-radius: 3px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;">{item['subject']}</span>
-                                <span title="{item['title']}" style="cursor: pointer; font-weight: bold; color: #555; margin-left: 2px; padding: 0 3px; background-color: #ddd; border-radius: 50%; font-size: 10px;">i</span>
-                            </div>
-                            """
+                        # 추가된 과목이 내 수강 과목 목록이나 선택 과목 원본 이름에 맞는지 확인
+                        item_sub = item["subject"]
+                        if item_sub in my_subject_list or item_sub in [s.rstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ") for s in my_subject_list]:
+                            safe_title = item['title'].replace('"', '&quot;')
+                            eval_html_items += (
+                                f'<div style="font-size: 11px; margin-top: 3px; background-color: #eee; '
+                                f'padding: 2px 4px; border-radius: 3px; display: flex; justify-content: space-between; align-items: center;">'
+                                f'<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 75px;">{item_sub}</span>'
+                                f'<span title="{safe_title}" style="cursor: pointer; font-weight: bold; color: #555; '
+                                f'margin-left: 2px; padding: 0 4px; background-color: #ddd; border-radius: 50%; font-size: 10px;">i</span>'
+                                f'</div>'
+                            )
                 
-                cell_html = f"""
-                <div style="{border_style} {bg_style} padding: 4px; border-radius: 5px; min-height: 130px; box-sizing: border-box;">
-                    <div style="font-size: 12px; font-weight: bold;">{day}</div>
-                    {eval_html_items}
-                </div>
-                """
+                # 셀 전체 HTML 렌더링
+                cell_html = (
+                    f'<div style="{border_style} {bg_style} padding: 4px; border-radius: 5px; min-height: 130px; box-sizing: border-box;">'
+                    f'<div style="font-size: 12px; font-weight: bold;">{day}</div>'
+                    f'{eval_html_items}'
+                    f'</div>'
+                )
                 st.markdown(cell_html, unsafe_allow_html=True)
