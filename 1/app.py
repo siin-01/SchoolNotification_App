@@ -252,7 +252,7 @@ for week in month_calendar:
                 </div>
                 """
                 st.markdown(cell_html, unsafe_allow_html=True)
-                                    st.write(f"**날짜:** {curr_date_str}")
-                                    st.write(f"**과목:** {item['subject']}")
-                                    st.write(f"**수행평가 내용:** {item['title']}")
-                                show_detail()
+                st.write(f"**날짜:** {curr_date_str}")
+                st.write(f"**과목:** {item['subject']}")
+                st.write(f"**수행평가 내용:** {item['title']}")
+                show_detail()
