@@ -30,7 +30,7 @@ if "cal_month" not in st.session_state:
     st.session_state.cal_month = datetime.now().month
 
 # ---------------------------------------------------------
-# 2. 과목 데이터 정의 ((일반) 제거 및 고전 읽기 반영)
+# 2. 과목 데이터 정의
 # ---------------------------------------------------------
 FIXED_SUBJECTS = ["독서", "영어2", "심화 영어1", "운동과 건강"]
 
@@ -132,7 +132,7 @@ user_selected = user_info.get("selected_subjects", {})
 
 my_subject_list = list(user_fixed) + [f"{sub}{letter}" for sub, letter in user_selected.items()]
 
-# [사이드바 UI 구성 - 고정 노출]
+# [사이드바 UI 구성]
 with st.sidebar:
     st.markdown("## 수행평가 일정")
     st.markdown(f"### {current_id}")
@@ -158,7 +158,8 @@ evaluations_data = load_json(EVALUATIONS_FILE)
 with st.expander("수행평가 추가", expanded=False):
     with st.form("add_evaluation_form"):
         selected_sub_for_eval = st.selectbox("과목 선택", my_subject_list)
-        eval_date = st.date_input("날짜 선택", value=date.today(), format="MM/DD")
+        # format 파라미터 오류를 수정한 부분입니다.
+        eval_date = st.date_input("날짜 선택", value=date.today(), format="YYYY/MM/DD")
         eval_title = st.text_input("제목 입력")
         
         submit_btn = st.form_submit_button("등록")
@@ -181,7 +182,7 @@ with st.expander("수행평가 추가", expanded=False):
                 st.success("등록되었습니다.")
                 st.rerun()
 
-# 2. 월 선택 컨트롤 (연도 제거, 월 표기)
+# 2. 월 선택 컨트롤 (월만 표기)
 col_prev, col_title, col_next = st.columns([1, 4, 1])
 with col_prev:
     if st.button("이전 달"):
@@ -207,7 +208,7 @@ with col_title:
         unsafe_allow_html=True
     )
 
-# 3. 달력 그리드 렌더링 (높이 고정 & Tooltip 적용)
+# 3. 달력 그리드 렌더링 (높이 고정 130px & HTML Tooltip 적용)
 year = st.session_state.cal_year
 month = st.session_state.cal_month
 today_str = date.today().strftime("%Y-%m-%d")
@@ -232,12 +233,11 @@ for week in month_calendar:
                 border_style = "border: 2px solid #3366ff;" if is_today else "border: 1px solid #ddd;"
                 bg_style = "background-color: #f8f9fa;" if is_today else "background-color: #ffffff;"
                 
-                # 일별 영역 HTML 생성 (최소 높이 130px로 설정)
+                # 일별 항목 HTML 생성
                 eval_html_items = ""
                 if curr_date_str in evaluations_data:
                     for item in evaluations_data[curr_date_str]:
                         if item["subject"] in my_subject_list:
-                            # 과목명 옆 i 아이콘 호버 시 제목 표시
                             eval_html_items += f"""
                             <div style="font-size: 11px; margin-top: 3px; background-color: #eee; padding: 2px 4px; border-radius: 3px; display: flex; justify-content: space-between; align-items: center;">
                                 <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;">{item['subject']}</span>
@@ -252,7 +252,3 @@ for week in month_calendar:
                 </div>
                 """
                 st.markdown(cell_html, unsafe_allow_html=True)
-                st.write(f"**날짜:** {curr_date_str}")
-                st.write(f"**과목:** {item['subject']}")
-                st.write(f"**수행평가 내용:** {item['title']}")
-                show_detail()
